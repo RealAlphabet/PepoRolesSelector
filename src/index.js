@@ -16,85 +16,90 @@ function colorToRGB(color) {
 
 
 ////////////////////////////////////////////
-//  ROLES SELECTOR
+//  DISCORD ITEM SELECTOR
 ////////////////////////////////////////////
 
 
-export default class extends React.Component {
+export default function (props) {
+    const input                     = React.createRef();
+    const [ selected ]              = React.useState(new Set());
+    const [ search, setSearch]      = React.useState("");
+    const [ , setState]             = React.useState();
 
-    constructor(props) {
-        super(props);
-        this.input = React.createRef();
-        this.state = {
-            selected    : new Set(),
-            search      : ""
-        };
-    }
 
-    //  INPUT
+    /////////////////////
+    //  HELPERS
+    /////////////////////
 
-    onFocus() {
-        this.input.current.focus();
-    }
 
-    onType({ target }) {
-        this.setState({
-            search: target.innerText.toLowerCase()
-        });
-    }
+    const onFocus = () => {
+        input.current.focus();
+    };
 
-    //  ROLES
+    const onInput = () => {
+        setSearch(input.current.innerText.toLowerCase());
+    };
 
-    onSelect(role) {
-        this.state.selected.has(role)
-            ? this.state.selected.delete(role)
-            : this.state.selected.add(role);
+    const onBackspace = ({ key }) => {
+        if (key == 'Backspace' && !input.current.innerText.length) {
+            selected.delete([...selected].pop());
+            setState({});   // Trigger force update.
+        }
+    };
 
-        this.props.onSelect(this.state.selected, role);
-        this.input.current.focus();
-        this.forceUpdate();
-    }
+    const onSelect = (role) => {
+        if (selected.has(role)) {
+            selected.delete(role);
 
+        } else if (selected.size < props.limit) {
+            selected.add(role);
+        }
+
+        setState({});       // Trigger force update.
+        props.onSelect(selected, role);
+        input.current.focus();
+    };
+
+
+    /////////////////////
     //  RENDER
+    /////////////////////
 
-    render() {
-        let search = this.props.roles.filter(role => {
-            return this.state.selected.has(role.id) == false && role.name.toLowerCase().includes(this.state.search)
-        });
 
-        let selected = this.props.roles.filter(role => {
-            return this.state.selected.has(role.id);
-        });
+    const itemsSelected = props.roles.filter((role) => selected.has(role.id));
 
-        return (
-            <div className="role-selector">
-                <div className="role-selector-base" onClick={this.onFocus.bind(this)}>
-                    {selected.map(({ id, name, color }, i) => {
-                        color = colorToRGB(color);
+    const itemsFound = (search.length)
+        ? props.roles.filter((role) => !selected.has(role.id) && role.name.toLowerCase().includes(search))
+        : [];
 
-                        return (
-                            <div className="role-selector-inline" style={{ borderColor: color }} onClick={this.onSelect.bind(this, id)} key={i}>
-                                <div className="role-selector-circle" style={{ backgroundColor: color }} />
-                                <span>{name}</span>
-                            </div>
-                        );
-                    })}
+    return (
+        <div className="role-selector">
+            <div className="role-selector-base" onClick={onFocus}>
+                {itemsSelected.map(({ id, name, color }, i) => {
+                    color = colorToRGB(color);
 
-                    <div className="role-selector-input" contentEditable="true" onInput={this.onType.bind(this)} ref={this.input} />
-                </div>
+                    return (
+                        <div className="role-selector-inline" style={{ borderColor: color }} onClick={() => onSelect(id)} key={i}>
+                            <div className="role-selector-circle" style={{ backgroundColor: color }} />
+                            <span>{name}</span>
+                        </div>
+                    );
+                })}
 
-                <div className="role-selector-list">
-                    {search.map(({ id, name, color }, i) => {
-                        color = colorToRGB(color);
-
-                        return (
-                            <div className="role-selector-role" onClick={this.onSelect.bind(this, id)} key={i}>
-                                <div className="role-selector-circle" style={{ backgroundColor: color }} /> {name}
-                            </div>
-                        );
-                    })}
-                </div>
+                <div className="role-selector-input" contentEditable="true" onInput={onInput} onKeyDown={onBackspace} ref={input} />
             </div>
-        )
-    }
+
+            <div className="role-selector-list">
+                {itemsFound.map(({ id, name, color }, i) => {
+                    color = colorToRGB(color);
+
+                    return (
+                        <div className="role-selector-role" onClick={() => onSelect(id)} key={i}>
+                            <div className="role-selector-circle" style={{ backgroundColor: color }} /> {name}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }
